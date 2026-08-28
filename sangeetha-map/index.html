@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Sangeetha Intelligence Map</title>
+    <link rel="stylesheet" href="/sangeetha-map/styles.css" />
+  </head>
+  <body>
+    <main class="map-shell">
+      <div class="map-canvas" id="map" aria-label="Sangeetha store map"></div>
+      <div class="area-draw-frame" id="area-draw-frame" hidden aria-hidden="true">
+        <span>Area marking mode</span>
+      </div>
+      <div class="map-toast" id="map-toast" role="status" aria-live="polite" hidden>
+        <strong id="map-toast-title"></strong>
+        <span id="map-toast-text"></span>
+      </div>
+      <div class="store-sheet-backdrop" id="store-sheet-backdrop" hidden aria-hidden="true"></div>
+
+      <section class="map-control-stack" aria-label="Map controls">
+        <header class="map-topbar">
+          <h1 aria-label="Sangeetha Intelligence Map">
+            <img class="map-brand-logo" src="/sangeetha-map/assets/sangeetha-logo.png" alt="" aria-hidden="true" />
+            <span class="map-brand-name">
+              <span class="map-brand-company">Sangeetha</span>
+              <span class="map-brand-product">Intelligence Map</span>
+            </span>
+          </h1>
+          <button class="action-button action-icon-button top-search-button" id="top-search-button" type="button" aria-label="Show search" aria-expanded="false" title="Search stores">
+            <i class="control-icon" data-lucide="search" aria-hidden="true"></i>
+          </button>
+          <label class="region-control">
+            <span class="sr-only">Region</span>
+            <select id="region-filter" aria-label="Filter stores by state" autocomplete="off">
+              <option value="">All India</option>
+            </select>
+          </label>
+        </header>
+
+        <div class="map-tools" id="map-tools" aria-label="Map search and location controls" hidden>
+          <div class="city-search-card">
+            <i class="search-icon" data-lucide="search" aria-hidden="true"></i>
+            <div class="city-search-host" id="city-search-host">
+              <input class="store-search-input" id="store-search-input" type="search" placeholder="Search store no or name" autocomplete="off" aria-label="Search store number or name" />
+              <div class="store-search-results" id="store-search-results" hidden></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="map-helper-card" id="map-helper-card" hidden>
+          <p class="map-helper-title" id="map-helper-title">Select Area</p>
+          <p class="map-helper-text" id="map-helper-text">Tap the map to draw a boundary.</p>
+        </div>
+      </section>
+
+      <button class="location-button" id="location-button" type="button" aria-label="Show my current location" title="My location">
+        <i class="location-icon" data-lucide="locate-fixed" aria-hidden="true"></i>
+      </button>
+
+      <div class="map-modebar" aria-label="Store management tools">
+        <button class="mode-button add-store-mode" id="add-store-button" type="button">
+          <i class="mode-icon" data-lucide="plus" aria-hidden="true"></i>
+          <span class="mode-text">Add Store</span>
+        </button>
+        <button class="mode-button area-mode is-primary" id="area-button" type="button">
+          <i class="mode-icon" data-lucide="scan" aria-hidden="true"></i>
+          <span>Select Area</span>
+        </button>
+        <button class="mode-button area-boundary-rename" id="area-rename-button" type="button" aria-label="Rename selected boundary" title="Rename boundary" hidden>
+          <i class="mode-icon" data-lucide="pencil" aria-hidden="true"></i>
+          <span class="mode-text">Rename</span>
+        </button>
+        <button class="mode-button area-boundary-delete" id="area-delete-button" type="button" aria-label="Delete selected boundary" title="Delete boundary" hidden>
+          <i class="mode-icon" data-lucide="trash-2" aria-hidden="true"></i>
+          <span class="mode-text">Delete</span>
+        </button>
+        <button class="mode-button saved-areas-toggle" id="saved-areas-toggle" type="button" aria-label="Hide saved areas" title="Hide saved areas">
+          <i class="mode-icon" data-lucide="eye" aria-hidden="true"></i>
+          <span>Areas</span>
+        </button>
+        <button class="mode-button mode-button-clear" id="area-clear-button" type="button" aria-label="Clear area selection" title="Clear area" hidden>
+          <i class="control-icon" data-lucide="x" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <section class="sr-only" id="status-card" aria-live="polite">
+        <p class="status-label" id="status-label">Connecting…</p>
+        <p class="status-detail" id="status-detail">Loading map configuration and cached store locations.</p>
+      </section>
+
+      <div class="delete-confirm-backdrop" id="delete-confirm-backdrop" hidden></div>
+      <section class="delete-confirm-dialog" id="delete-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-confirm-title" aria-describedby="delete-confirm-message" hidden>
+        <div class="delete-confirm-icon" aria-hidden="true">
+          <i data-lucide="triangle-alert"></i>
+        </div>
+        <p class="sheet-kicker">Permanent action</p>
+        <h2 class="delete-confirm-title" id="delete-confirm-title">Delete this store?</h2>
+        <p class="delete-confirm-message" id="delete-confirm-message">This action is irreversible. The store information and map pin will be permanently deleted.</p>
+        <div class="delete-confirm-actions">
+          <button class="sheet-cancel-button" id="delete-cancel-button" type="button">Cancel</button>
+          <button class="delete-confirm-button" id="delete-confirm-button" type="button">Delete permanently</button>
+        </div>
+      </section>
+
+      <section class="store-sheet" id="store-sheet" role="dialog" aria-live="polite" hidden>
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <button class="sheet-close" id="sheet-close" type="button" aria-label="Close store details">
+          <i class="control-icon" data-lucide="x" aria-hidden="true"></i>
+        </button>
+
+        <div class="sheet-view" id="sheet-store-view">
+          <p class="sheet-kicker" id="sheet-kicker">Sangeetha Mobiles</p>
+          <h2 class="sheet-title" id="sheet-title">Store</h2>
+          <div class="sheet-detail-stack">
+            <p class="sheet-meta detail-row">
+              <i class="detail-icon" data-lucide="store" aria-hidden="true"></i>
+              <span id="sheet-meta"></span>
+            </p>
+            <p class="sheet-address detail-row">
+              <i class="detail-icon" data-lucide="map-pin" aria-hidden="true"></i>
+              <span id="sheet-address"></span>
+            </p>
+            <p class="sheet-coordinates detail-row">
+              <i class="detail-icon" data-lucide="crosshair" aria-hidden="true"></i>
+              <span id="sheet-coordinates"></span>
+            </p>
+          </div>
+          <div class="store-management-actions">
+            <a class="sheet-link" id="sheet-link" href="#" target="_blank" rel="noreferrer">
+              <i class="button-icon" data-lucide="map-pin" aria-hidden="true"></i>
+              <span>Google Maps</span>
+            </a>
+            <button class="sheet-edit-button" id="edit-store-button" type="button" aria-label="Edit store" title="Edit store">
+              <i class="button-icon" data-lucide="pencil" aria-hidden="true"></i>
+            </button>
+            <button class="sheet-delete-button" id="delete-store-button" type="button" aria-label="Delete store" title="Delete store">
+              <i class="button-icon" data-lucide="trash-2" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <form class="store-edit-form" id="store-edit-form" hidden>
+            <p class="sheet-form-note">Update the store details or move its map pin.</p>
+            <label class="sheet-field">
+              <span>Store Name</span>
+              <input id="edit-store-name" type="text" required autocomplete="off" />
+            </label>
+            <label class="sheet-field">
+              <span>Address</span>
+              <textarea id="edit-store-address" rows="2" autocomplete="street-address"></textarea>
+            </label>
+            <div class="sheet-grid">
+              <label class="sheet-field">
+                <span>City</span>
+                <input id="edit-store-city" type="text" autocomplete="address-level2" />
+              </label>
+              <label class="sheet-field">
+                <span>State</span>
+                <input id="edit-store-state" type="text" autocomplete="address-level1" />
+              </label>
+            </div>
+            <label class="sheet-field">
+              <span>Phone</span>
+              <input id="edit-store-phone" type="tel" autocomplete="tel" />
+            </label>
+            <label class="sheet-field">
+              <span>Hours</span>
+              <textarea id="edit-store-hours" rows="2" autocomplete="off"></textarea>
+            </label>
+            <div class="sheet-grid">
+              <label class="sheet-field">
+                <span>Latitude</span>
+                <input id="edit-store-latitude" type="text" inputmode="decimal" required autocomplete="off" />
+              </label>
+              <label class="sheet-field">
+                <span>Longitude</span>
+                <input id="edit-store-longitude" type="text" inputmode="decimal" required autocomplete="off" />
+              </label>
+            </div>
+            <label class="sheet-field">
+              <span>Store Sqft</span>
+              <input id="edit-store-sqft" type="text" inputmode="numeric" autocomplete="off" />
+            </label>
+            <div class="store-edit-form-actions">
+              <button class="sheet-cancel-button" id="cancel-store-edit-button" type="button">Cancel</button>
+              <button class="sheet-save-button" id="save-store-button" type="submit">Save Changes</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="sheet-view" id="sheet-add-view" hidden>
+          <p class="sheet-kicker">Manual Store</p>
+          <h2 class="sheet-title">Add a New Store</h2>
+          <form class="add-store-form" id="add-store-form">
+            <label class="sheet-field">
+              <span>Store Name</span>
+              <input id="add-store-name" type="text" required autocomplete="off" />
+            </label>
+            <div class="location-mode-picker" role="group" aria-label="Choose store location method">
+              <button class="location-mode-button is-active" type="button" data-location-mode="coordinates">Lat / Long</button>
+              <button class="location-mode-button" type="button" data-location-mode="current">My Location</button>
+              <button class="location-mode-button" type="button" data-location-mode="drop-pin">Drop Pin</button>
+            </div>
+            <p class="location-mode-status" id="add-location-status">Enter the store coordinates below.</p>
+            <div class="add-location-details" id="add-location-details">
+              <div class="sheet-grid">
+                <label class="sheet-field">
+                  <span>Latitude</span>
+                  <input id="add-store-latitude" type="text" inputmode="decimal" required autocomplete="off" />
+                </label>
+                <label class="sheet-field">
+                  <span>Longitude</span>
+                  <input id="add-store-longitude" type="text" inputmode="decimal" required autocomplete="off" />
+                </label>
+              </div>
+            </div>
+            <input id="add-store-address" type="hidden" />
+            <input id="add-store-city" type="hidden" />
+            <input id="add-store-state" type="hidden" />
+            <label class="sheet-field">
+              <span>Store Sqft</span>
+              <input id="add-store-sqft" type="text" inputmode="numeric" autocomplete="off" />
+            </label>
+            <button class="sheet-save-button" id="add-store-save-button" type="submit">Create Store</button>
+          </form>
+        </div>
+
+        <section class="selection-panel" id="proximity-panel" hidden>
+          <div class="selection-panel-header">
+            <h3>Stores Near This Point</h3>
+            <p id="proximity-origin-label"></p>
+          </div>
+          <div class="radius-options" id="radius-options">
+            <button class="radius-chip" type="button" data-radius-km="1">1 km</button>
+            <button class="radius-chip" type="button" data-radius-km="3">3 km</button>
+            <button class="radius-chip" type="button" data-radius-km="5">5 km</button>
+            <button class="radius-chip" type="button" data-radius-km="10">10 km</button>
+            <button class="radius-chip" type="button" data-radius-km="20">20 km</button>
+            <button class="radius-chip" type="button" data-radius-km="30">30 km</button>
+          </div>
+          <div class="custom-radius-row">
+            <label for="custom-radius-input">Custom</label>
+            <div class="custom-radius-control">
+              <input id="custom-radius-input" type="number" min="0.1" max="500" step="0.1" inputmode="decimal" placeholder="Enter km" />
+              <button id="custom-radius-button" type="button">Apply</button>
+            </div>
+          </div>
+          <div class="proximity-actions">
+            <button class="proximity-action-button" id="proximity-clear-button" type="button">
+              <i class="button-icon" data-lucide="rotate-ccw" aria-hidden="true"></i>
+              <span>Reset radius</span>
+            </button>
+          </div>
+          <p class="selection-summary" id="proximity-summary"></p>
+          <ul class="selection-list" id="proximity-list"></ul>
+        </section>
+
+        <section class="selection-panel" id="area-panel" hidden>
+          <div class="selection-panel-header">
+            <h3>Selected Area</h3>
+            <p id="area-summary"></p>
+          </div>
+          <ul class="selection-list" id="area-list"></ul>
+        </section>
+
+        <p class="sheet-feedback" id="sheet-feedback" hidden></p>
+      </section>
+    </main>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+    <script src="https://unpkg.com/@googlemaps/markerclusterer@2.6.2/dist/index.min.js" defer></script>
+    <script src="/sangeetha-map/app.js" defer></script>
+  </body>
+</html>
