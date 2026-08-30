@@ -49,6 +49,10 @@ const state = {
   stores: [],
   trafficPolylines: [],
   trafficSnapshot: null,
+  trafficVisible: true,
+  commercialDensityOverlay: null,
+  commercialDensitySnapshot: null,
+  commercialDensityVisible: true,
 };
 
 const INDIA_BOUNDS = {
@@ -98,6 +102,7 @@ const el = {
   areaRenameButton: document.getElementById("area-rename-button"),
   areaSummary: document.getElementById("area-summary"),
   citySearchHost: document.getElementById("city-search-host"),
+  commercialDensityToggle: document.getElementById("commercial-density-toggle"),
   cancelStoreEditButton: document.getElementById("cancel-store-edit-button"),
   deleteStoreButton: document.getElementById("delete-store-button"),
   deleteCancelButton: document.getElementById("delete-cancel-button"),
@@ -149,12 +154,7 @@ const el = {
   statusDetail: document.getElementById("status-detail"),
   statusLabel: document.getElementById("status-label"),
   topSearchButton: document.getElementById("top-search-button"),
-  trafficButton: document.getElementById("traffic-button"),
-  trafficCard: document.getElementById("traffic-card"),
-  trafficCardClose: document.getElementById("traffic-card-close"),
-  trafficRoadList: document.getElementById("traffic-road-list"),
-  trafficCardSummary: document.getElementById("traffic-card-summary"),
-  trafficCardTitle: document.getElementById("traffic-card-title"),
+  trafficToggle: document.getElementById("traffic-toggle"),
   storeSearchInput: document.getElementById("store-search-input"),
   storeSearchResults: document.getElementById("store-search-results"),
   storeSheet: document.getElementById("store-sheet"),
@@ -299,10 +299,14 @@ function setAreaModeUi(active) {
   el.areaRenameButton.hidden = !(active && state.areaDraftId);
   el.areaDeleteButton.hidden = !(active && state.areaDraftId);
   el.savedAreasToggle.hidden = active;
+  el.trafficToggle.hidden = active;
+  el.commercialDensityToggle.hidden = active;
   el.addStoreButton.disabled = active;
   el.areaRenameButton.disabled = state.areaSaveInFlight || state.areaPromptOpen;
   el.areaDeleteButton.disabled = state.areaSaveInFlight || state.areaPromptOpen;
   el.savedAreasToggle.disabled = active && state.areaSaveInFlight;
+  el.trafficToggle.disabled = active;
+  el.commercialDensityToggle.disabled = active;
   el.locationButton.disabled = active;
   el.regionFilter.disabled = active || state.loading;
   el.storeSearchInput.disabled = active;
@@ -322,6 +326,32 @@ function updateSavedAreasToggle() {
     <span>${label}</span>
   `;
   renderIconSet(el.savedAreasToggle);
+}
+
+function updateTrafficToggle() {
+  const iconName = state.trafficVisible ? "eye" : "eye-off";
+  const label = state.trafficVisible ? "Traffic" : "Hidden";
+  el.trafficToggle.setAttribute("aria-label", state.trafficVisible ? "Hide traffic overlay" : "Show traffic overlay");
+  el.trafficToggle.title = state.trafficVisible ? "Hide traffic overlay" : "Show traffic overlay";
+  el.trafficToggle.classList.toggle("is-muted", !state.trafficVisible);
+  el.trafficToggle.innerHTML = `
+    <i class="mode-icon" data-lucide="${iconName}" aria-hidden="true"></i>
+    <span>${label}</span>
+  `;
+  renderIconSet(el.trafficToggle);
+}
+
+function updateCommercialDensityToggle() {
+  const iconName = state.commercialDensityVisible ? "eye" : "eye-off";
+  const label = state.commercialDensityVisible ? "Commercial" : "Hidden";
+  el.commercialDensityToggle.setAttribute("aria-label", state.commercialDensityVisible ? "Hide commercial density overlay" : "Show commercial density overlay");
+  el.commercialDensityToggle.title = state.commercialDensityVisible ? "Hide commercial density overlay" : "Show commercial density overlay";
+  el.commercialDensityToggle.classList.toggle("is-muted", !state.commercialDensityVisible);
+  el.commercialDensityToggle.innerHTML = `
+    <i class="mode-icon" data-lucide="${iconName}" aria-hidden="true"></i>
+    <span>${label}</span>
+  `;
+  renderIconSet(el.commercialDensityToggle);
 }
 
 function setSheetFeedback(message, isError = false) {
@@ -387,57 +417,168 @@ function drawTrafficCorridor(map, corridor, bounds) {
   path.forEach((point) => bounds.extend(point));
 }
 
-function renderTrafficRoadList(corridors) {
-  const ranked = [...corridors]
-    .map((corridor) => ({
-      ...corridor,
-      delayMinutes: Math.max(0, durationMinutes(corridor.duration) - durationMinutes(corridor.staticDuration)),
-    }))
-    .sort((a, b) => b.delayMinutes - a.delayMinutes);
-  el.trafficRoadList.innerHTML = ranked.slice(0, 5).map((corridor) => `
-    <li class="traffic-road-item">
-      <span>${corridor.name}</span>
-      <strong>+${corridor.delayMinutes} min</strong>
-    </li>
-  `).join("");
-}
-
-async function showBengaluruTraffic() {
+async function renderBengaluruTraffic({ fitView = false } = {}) {
   try {
-    el.trafficButton.disabled = true;
-    el.trafficCard.hidden = false;
-    el.trafficCardTitle.textContent = "Loading fixed snapshot…";
-    el.trafficCardSummary.textContent = "";
-
+    if (!state.trafficVisible) return;
     if (!state.trafficSnapshot) {
       state.trafficSnapshot = await fetchJson("/api/bengaluru-traffic-snapshot");
     }
     const corridors = state.trafficSnapshot.corridors || [];
     if (!corridors.length) throw new Error("Bengaluru traffic snapshot is unavailable.");
 
-    const highTrafficCount = corridors.filter((corridor) => (
-      durationMinutes(corridor.duration) - durationMinutes(corridor.staticDuration) >= 12
-    )).length;
-    el.trafficCardTitle.textContent = "Bengaluru traffic snapshot";
-    el.trafficCardSummary.textContent = `${highTrafficCount} high-traffic corridors in this fixed capture`;
-    renderTrafficRoadList(corridors);
-
     const map = await ensureMap();
     clearTrafficRoute();
     const bounds = new google.maps.LatLngBounds();
     corridors.forEach((corridor) => drawTrafficCorridor(map, corridor, bounds));
-    map.fitBounds(bounds, 72);
+    if (fitView) map.fitBounds(bounds, 72);
   } catch (error) {
-    el.trafficCard.hidden = true;
-    showToast("Traffic snapshot unavailable", error.message, 7000);
-  } finally {
-    el.trafficButton.disabled = false;
+    console.warn("Traffic snapshot unavailable.", error);
   }
 }
 
-function hideBengaluruTraffic() {
-  el.trafficCard.hidden = true;
-  clearTrafficRoute();
+async function toggleTrafficVisibility() {
+  state.trafficVisible = !state.trafficVisible;
+  updateTrafficToggle();
+  if (state.trafficVisible) {
+    await renderBengaluruTraffic();
+  } else {
+    clearTrafficRoute();
+  }
+}
+
+function clearCommercialDensity() {
+  state.commercialDensityOverlay?.setMap(null);
+  state.commercialDensityOverlay = null;
+}
+
+function groupCommercialDensityPoints(points) {
+  const cellSize = 0.0022;
+  const cells = new Map();
+  points.forEach((point) => {
+    const lat = Number(point.lat);
+    const lng = Number(point.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const key = `${Math.floor(lat / cellSize)}:${Math.floor(lng / cellSize)}`;
+    const cell = cells.get(key) || { lat: 0, lng: 0, weight: 0, count: 0 };
+    cell.lat += lat;
+    cell.lng += lng;
+    cell.weight += Number(point.weight) || 0.7;
+    cell.count += 1;
+    cells.set(key, cell);
+  });
+  return [...cells.values()].map((cell) => ({
+    lat: cell.lat / cell.count,
+    lng: cell.lng / cell.count,
+    weight: cell.weight,
+  }));
+}
+
+function blendDensityColor(from, to, amount) {
+  const start = from.match(/[a-f\d]{2}/gi).map((value) => Number.parseInt(value, 16));
+  const end = to.match(/[a-f\d]{2}/gi).map((value) => Number.parseInt(value, 16));
+  return `#${start.map((channel, index) => Math.round(channel + ((end[index] - channel) * amount)).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function getCommercialHeatColor(intensity) {
+  const colors = ["#1fcb61", "#b4df42", "#ffe24d", "#ff9f28", "#ef4628", "#7c1010"];
+  const scaled = Math.max(0, Math.min(1, intensity)) * (colors.length - 1);
+  const index = Math.min(Math.floor(scaled), colors.length - 2);
+  return blendDensityColor(colors[index], colors[index + 1], scaled - index);
+}
+
+function asRgba(hex, alpha) {
+  const [red, green, blue] = hex.match(/[a-f\d]{2}/gi).map((value) => Number.parseInt(value, 16));
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function createCommercialDensityOverlay(cells) {
+  class CommercialDensityOverlay extends google.maps.OverlayView {
+    constructor() {
+      super();
+      this.canvas = document.createElement("canvas");
+      this.canvas.style.position = "absolute";
+      this.canvas.style.top = "0";
+      this.canvas.style.left = "0";
+      this.canvas.style.pointerEvents = "none";
+    }
+
+    onAdd() {
+      this.getPanes().floatPane.appendChild(this.canvas);
+    }
+
+    onRemove() {
+      this.canvas.remove();
+    }
+
+    draw() {
+      const map = this.getMap();
+      const projection = this.getProjection();
+      const mapDiv = map?.getDiv();
+      if (!map || !projection || !mapDiv) return;
+      const width = mapDiv.clientWidth;
+      const height = mapDiv.clientHeight;
+      if (!width || !height) return;
+      this.canvas.width = width;
+      this.canvas.height = height;
+      this.canvas.style.width = `${width}px`;
+      this.canvas.style.height = `${height}px`;
+      const context = this.canvas.getContext("2d");
+      context.clearRect(0, 0, width, height);
+      context.globalCompositeOperation = "source-over";
+
+      const weights = cells.map((cell) => cell.weight).sort((a, b) => a - b);
+      const floor = weights[Math.floor(weights.length * 0.42)] || 0;
+      const peak = weights[weights.length - 1] || 1;
+      const radius = Math.max(46, Math.min(82, 22 + (map.getZoom() * 3.2)));
+      [...cells].sort((a, b) => a.weight - b.weight).forEach((cell) => {
+        const intensity = Math.max(0, Math.min(1, (cell.weight - floor) / Math.max(1, peak - floor)));
+        if (intensity < 0.04) return;
+        const position = projection.fromLatLngToDivPixel(new google.maps.LatLng(cell.lat, cell.lng));
+        if (!position || position.x < -radius || position.x > width + radius || position.y < -radius || position.y > height + radius) return;
+        const color = getCommercialHeatColor(Math.pow(intensity, 0.86));
+        const gradient = context.createRadialGradient(position.x, position.y, 0, position.x, position.y, radius);
+        gradient.addColorStop(0, asRgba(color, 0.045 + (intensity * 0.12)));
+        gradient.addColorStop(0.32, asRgba(color, 0.03 + (intensity * 0.08)));
+        gradient.addColorStop(0.68, asRgba(color, 0.012 + (intensity * 0.025)));
+        gradient.addColorStop(1, asRgba(color, 0));
+        context.fillStyle = gradient;
+        context.fillRect(position.x - radius, position.y - radius, radius * 2, radius * 2);
+      });
+    }
+  }
+  return new CommercialDensityOverlay();
+}
+
+async function renderCommercialDensity() {
+  try {
+    if (!state.commercialDensityVisible) return;
+    if (!state.commercialDensitySnapshot) {
+      state.commercialDensitySnapshot = await fetchJson("/api/bengaluru-commercial-density");
+    }
+    const bounds = state.commercialDensitySnapshot.area?.bounds;
+    if (!bounds) throw new Error("Commercial density bounds are unavailable.");
+
+    const map = await ensureMap();
+    clearCommercialDensity();
+    state.commercialDensityOverlay = new google.maps.GroundOverlay(
+      "/sangeetha-map/assets/central-commercial-heatmap.png",
+      { north: bounds.north, south: bounds.south, east: bounds.east, west: bounds.west },
+      { clickable: false, opacity: 0.92 },
+    );
+    state.commercialDensityOverlay.setMap(map);
+  } catch (error) {
+    console.warn("Commercial density overlay unavailable.", error);
+  }
+}
+
+async function toggleCommercialDensityVisibility() {
+  state.commercialDensityVisible = !state.commercialDensityVisible;
+  updateCommercialDensityToggle();
+  if (state.commercialDensityVisible) {
+    await renderCommercialDensity();
+  } else {
+    clearCommercialDensity();
+  }
 }
 
 async function loadRuntimeConfig() {
@@ -2280,8 +2421,6 @@ function bindEvents() {
     setSearchVisibility(el.mapTools.hidden);
   });
   el.locationButton.addEventListener("click", showCurrentLocation);
-  el.trafficButton.addEventListener("click", showBengaluruTraffic);
-  el.trafficCardClose.addEventListener("click", hideBengaluruTraffic);
   el.sheetClose.addEventListener("click", () => showStoreSheet(null));
   el.regionFilter.addEventListener("change", async () => {
     state.selectedRegion = el.regionFilter.value;
@@ -2319,6 +2458,8 @@ function bindEvents() {
     button.addEventListener("click", () => setAddLocationMode(button.dataset.locationMode));
   });
   el.savedAreasToggle.addEventListener("click", toggleSavedAreasVisibility);
+  el.trafficToggle.addEventListener("click", toggleTrafficVisibility);
+  el.commercialDensityToggle.addEventListener("click", toggleCommercialDensityVisibility);
   el.areaRenameButton.addEventListener("click", renameAreaSelection);
   el.areaDeleteButton.addEventListener("click", deleteAreaSelection);
   el.areaButton.addEventListener("click", async () => {
@@ -2364,6 +2505,8 @@ async function init() {
   window.addEventListener("load", () => renderIconSet(), { once: true });
   bindEvents();
   updateSavedAreasToggle();
+  updateTrafficToggle();
+  updateCommercialDensityToggle();
   setLoadingState(true);
 
   try {
@@ -2371,6 +2514,8 @@ async function init() {
     await ensureMap();
     setupStoreSearch();
     await loadStores();
+    await renderBengaluruTraffic({ fitView: true });
+    await renderCommercialDensity();
     await loadAreas().catch((error) => {
       console.warn("Saved areas could not be loaded.", error);
     });
