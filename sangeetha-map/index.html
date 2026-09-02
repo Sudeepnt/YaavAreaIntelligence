@@ -3,12 +3,179 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>Sangeetha Intelligence Map</title>
+    <title>YaavArea Intelligence</title>
     <link rel="stylesheet" href="/sangeetha-map/styles.css" />
   </head>
   <body>
-    <main class="map-shell">
-      <div class="map-canvas" id="map" aria-label="Sangeetha store map"></div>
+    <main class="home-screen" id="home-screen">
+      <div class="home-app-shell">
+        <header class="home-header">
+          <div class="home-brand-lockup">
+            <img class="home-brand-logo" src="/sangeetha-map/assets/yaavarea-logo.png" alt="YaavArea Intelligence" />
+            <div>
+              <p class="home-brand-name">YaavArea</p>
+              <p class="home-brand-product">Intelligence</p>
+            </div>
+          </div>
+          <div class="home-header-actions">
+            <button class="home-icon-button" id="home-notification-button" type="button" aria-label="View updates" title="Updates">
+              <i data-lucide="bell" aria-hidden="true"></i>
+              <span class="notification-dot" aria-hidden="true"></span>
+            </button>
+            <button class="home-profile-button" id="home-profile-button" type="button">
+              <span class="profile-avatar">S</span>
+              <span class="profile-copy"><strong>Sudeep</strong><small>Admin view</small></span>
+              <i data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+          </div>
+        </header>
+
+        <section class="home-intro" aria-labelledby="home-title">
+          <div class="home-intro-copy-block">
+            <p class="eyebrow">Wednesday, 02 September 2026</p>
+            <h1 id="home-title">See the opportunity<br /><em>around every store.</em></h1>
+            <p class="home-intro-copy">One clear view of your network, customer demand, and the streets shaping your next move.</p>
+          </div>
+          <div class="home-controls-row">
+            <button class="location-pill" id="home-location-button" type="button">
+              <i data-lucide="globe-2" aria-hidden="true"></i>
+              <span><strong>All India</strong><small>Network view</small></span>
+              <i class="location-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <section class="home-search-section" aria-label="Search intelligence">
+              <div class="home-search-wrap">
+                <i data-lucide="search" aria-hidden="true"></i>
+                <input id="home-search-input" type="search" placeholder="Search stores, cities, states, or saved areas" autocomplete="off" aria-label="Search stores, cities, states, or saved areas" />
+                <kbd>/</kbd>
+                <div class="home-search-results" id="home-search-results" hidden></div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <nav class="home-data-tabs" aria-label="Data views">
+          <button class="home-data-tab is-active" type="button" data-home-section="overview"><i data-lucide="layout-dashboard" aria-hidden="true"></i><span>Overview</span></button>
+          <button class="home-data-tab" type="button" data-home-section="stores"><i data-lucide="store" aria-hidden="true"></i><span>Stores</span></button>
+          <button class="home-data-tab" type="button" data-home-section="demand"><i data-lucide="scan-search" aria-hidden="true"></i><span>Demand</span></button>
+          <button class="home-data-tab" type="button" data-home-section="traffic"><i data-lucide="route" aria-hidden="true"></i><span>Traffic</span></button>
+          <button class="home-data-tab" type="button" data-home-section="areas"><i data-lucide="map" aria-hidden="true"></i><span>Saved areas</span></button>
+        </nav>
+
+        <div class="home-loader" id="home-loader" role="status" aria-live="polite" hidden>
+          <div class="home-loader-ring"><span class="home-loader-flower" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+          <span>Loading your intelligence view</span>
+        </div>
+
+        <section class="home-hero-grid" id="home-section-overview" data-home-panels="overview">
+          <article class="network-hero-card">
+            <div class="hero-card-topline"><span class="live-indicator"><i></i> Live network</span><i data-lucide="arrow-up-right" aria-hidden="true"></i></div>
+            <div class="hero-card-content">
+              <p class="hero-card-kicker">Your network at a glance</p>
+              <h2><span id="home-hero-store-count">918</span> locations<br />across the country.</h2>
+              <p>Start with the map, then layer on the signal that matters to your next decision.</p>
+            </div>
+            <button class="hero-card-button" id="hero-open-map-button" type="button">Open live map <i data-lucide="arrow-right" aria-hidden="true"></i></button>
+            <div class="hero-card-orbit orbit-one"></div><div class="hero-card-orbit orbit-two"></div><div class="hero-card-orbit orbit-three"></div>
+          </article>
+
+          <article class="coverage-pulse-card">
+            <div class="section-card-heading"><div><p class="eyebrow">Coverage pulse</p><h2>Where your network is strongest</h2></div><span class="freshness-badge"><i data-lucide="sparkles" aria-hidden="true"></i> Updated now</span></div>
+            <div class="coverage-pulse-main">
+              <div class="coverage-number"><strong id="home-coverage-leading-count">349</strong><span>stores</span><small id="home-coverage-leading-state">Karnataka leads</small></div>
+              <div class="mini-chart" aria-label="Store coverage trend illustration"><span style="height:34%"></span><span style="height:49%"></span><span style="height:43%"></span><span style="height:62%"></span><span style="height:57%"></span><span style="height:77%"></span><span style="height:92%"></span></div>
+            </div>
+            <div class="coverage-bar-list" id="home-coverage-bars"></div>
+          </article>
+        </section>
+
+        <section class="metric-grid" aria-label="Network metrics" data-home-panels="overview">
+          <article class="metric-card metric-card-blue"><span class="metric-icon"><i data-lucide="store" aria-hidden="true"></i></span><div><strong id="home-total-stores">918</strong><span>Active stores</span></div><small>Across India</small></article>
+          <article class="metric-card metric-card-peach"><span class="metric-icon"><i data-lucide="map-pin" aria-hidden="true"></i></span><div><strong id="home-total-cities">—</strong><span>Cities reached</span></div><small>Unique markets</small></article>
+          <article class="metric-card metric-card-lilac"><span class="metric-icon"><i data-lucide="layers-3" aria-hidden="true"></i></span><div><strong id="home-total-states">10</strong><span>States covered</span></div><small>Store footprint</small></article>
+          <article class="metric-card metric-card-mint"><span class="metric-icon"><i data-lucide="refresh-cw" aria-hidden="true"></i></span><div><strong>Weekly</strong><span>Data refresh</span></div><small>Latest snapshots</small></article>
+        </section>
+
+        <section class="home-section" id="home-section-network" data-home-panels="overview stores">
+          <div class="home-section-heading"><div><p class="eyebrow">Choose your lens</p><h2>Explore your network</h2></div><button class="text-action" id="home-network-map-button" type="button">View all on map <i data-lucide="arrow-up-right" aria-hidden="true"></i></button></div>
+          <div class="lens-card-grid">
+            <button class="lens-card lens-card-map" type="button" data-open-map="network"><span class="lens-card-icon"><i data-lucide="map" aria-hidden="true"></i></span><span class="lens-card-copy"><strong>Store network</strong><small>Find, compare, and edit every location.</small></span><span class="lens-card-stat"><b id="home-lens-store-count">918</b><small>locations</small></span><i class="lens-arrow" data-lucide="arrow-up-right" aria-hidden="true"></i></button>
+            <button class="lens-card lens-card-demand" type="button" data-home-section="demand"><span class="lens-card-icon"><i data-lucide="scan-search" aria-hidden="true"></i></span><span class="lens-card-copy"><strong>Commercial opportunity</strong><small>Spot the densest corridors in Bengaluru.</small></span><span class="lens-card-stat"><b>High</b><small>signal</small></span><i class="lens-arrow" data-lucide="arrow-up-right" aria-hidden="true"></i></button>
+            <button class="lens-card lens-card-traffic" type="button" data-home-section="traffic"><span class="lens-card-icon"><i data-lucide="route" aria-hidden="true"></i></span><span class="lens-card-copy"><strong>Traffic pulse</strong><small>Know where movement is building this week.</small></span><span class="lens-card-stat"><b id="home-traffic-corridor-count">7</b><small>corridors</small></span><i class="lens-arrow" data-lucide="arrow-up-right" aria-hidden="true"></i></button>
+          </div>
+        </section>
+
+        <section class="home-signal-grid" id="home-signal-grid">
+          <article class="signal-card demand-card" id="home-section-demand" data-home-panels="overview demand">
+            <div class="signal-card-header"><div><p class="eyebrow">Demand signal</p><h2>Central Bengaluru</h2></div><span class="signal-status signal-status-hot"><i></i> High density</span></div>
+            <div class="signal-map-preview"><img src="/sangeetha-map/assets/central-commercial-heatmap.png" alt="Commercial density heatmap preview for central Bengaluru" /><div class="signal-map-overlay"><span><i data-lucide="scan-search" aria-hidden="true"></i> Commercial density</span><b>Explore layer <i data-lucide="arrow-up-right" aria-hidden="true"></i></b></div></div>
+            <p class="signal-card-note">A live layer for understanding the streets, neighborhoods, and trade pockets around your stores.</p>
+            <button class="outline-action" type="button" data-open-map="demand">Open demand layer <i data-lucide="arrow-right" aria-hidden="true"></i></button>
+          </article>
+          <article class="signal-card traffic-card" id="home-section-traffic" data-home-panels="overview traffic">
+            <div class="signal-card-header"><div><p class="eyebrow">Movement signal</p><h2>Traffic this week</h2></div><span class="signal-status signal-status-good"><i></i> Snapshot ready</span></div>
+            <div class="traffic-stat-row"><div><strong id="home-traffic-primary">7</strong><span>corridors monitored</span></div><div><strong>08:30</strong><span>peak morning pulse</span></div></div>
+            <div class="traffic-line-chart" aria-label="Traffic activity trend illustration"><svg viewBox="0 0 520 150" role="img" aria-hidden="true"><path class="chart-fill" d="M0 122 C38 118 49 98 82 106 S124 126 155 102 S197 62 224 80 S261 105 286 83 S327 43 356 65 S395 100 421 74 S458 50 520 20 V150 H0 Z"></path><path class="chart-line" d="M0 122 C38 118 49 98 82 106 S124 126 155 102 S197 62 224 80 S261 105 286 83 S327 43 356 65 S395 100 421 74 S458 50 520 20"></path></svg><div class="chart-labels"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div></div>
+            <p class="signal-card-note">Compare road movement with store coverage before you plan your next market visit.</p>
+            <button class="outline-action" type="button" data-open-map="traffic">Open traffic layer <i data-lucide="arrow-right" aria-hidden="true"></i></button>
+          </article>
+        </section>
+
+        <section class="home-section regional-section" id="home-section-regions" data-home-panels="overview stores">
+          <div class="home-section-heading"><div><p class="eyebrow">Network footprint</p><h2>Regional coverage</h2></div><button class="text-action" id="home-regional-map-button" type="button">Open India map <i data-lucide="arrow-up-right" aria-hidden="true"></i></button></div>
+          <div class="regional-grid" id="home-regional-grid"></div>
+        </section>
+
+        <section class="home-next-step-card" data-home-panels="overview areas">
+          <div class="next-step-copy"><span class="next-step-icon"><i data-lucide="compass" aria-hidden="true"></i></span><div><p class="eyebrow">Next step</p><h2>Mark an area worth a closer look.</h2><p>Draw a boundary on the shared map and see which stores sit inside it.</p></div></div>
+          <button class="dark-action" id="home-area-button" type="button">Select an area <i data-lucide="arrow-right" aria-hidden="true"></i></button>
+        </section>
+
+        <section class="home-saved-areas-panel" id="home-section-areas" data-home-panels="areas">
+          <div class="home-section-heading"><div><p class="eyebrow">Your workspace</p><h2>Saved areas</h2></div><button class="text-action" type="button" data-open-map="network">Open map <i data-lucide="arrow-up-right" aria-hidden="true"></i></button></div>
+          <div class="saved-areas-empty"><span class="saved-areas-icon"><i data-lucide="scan" aria-hidden="true"></i></span><h3>No saved areas yet.</h3><p>Draw a boundary around a market or neighborhood and it will appear here for quick access.</p><button class="dark-action" id="home-saved-area-button" type="button">Create an area <i data-lucide="arrow-right" aria-hidden="true"></i></button></div>
+        </section>
+
+        <footer class="home-footer"><span>Built for decisions in the real world.</span><span>Data-led YaavArea Intelligence <i data-lucide="sparkles" aria-hidden="true"></i></span></footer>
+      </div>
+
+      <section class="cloud-error-screen" id="cloud-error-screen" aria-live="polite" hidden>
+        <div class="cloud-error-message">
+          <p class="eyebrow">Live map and Areas</p>
+          <h1>Google Cloud error…</h1>
+          <p>These views are unavailable until the Google Cloud map service is connected.</p>
+        </div>
+      </section>
+
+      <nav class="home-bottom-nav" aria-label="Primary navigation">
+        <button class="home-nav-item is-active" type="button" data-home-nav="home"><i data-lucide="house" aria-hidden="true"></i><span>Home</span></button>
+        <button class="home-nav-item" type="button" data-home-nav="map"><i data-lucide="map" aria-hidden="true"></i><span>Live map</span></button>
+        <button class="home-nav-item home-nav-featured" type="button" data-home-nav="insights"><span><i data-lucide="sparkles" aria-hidden="true"></i></span><span>Insights</span></button>
+        <button class="home-nav-item" type="button" data-home-nav="areas"><i data-lucide="scan" aria-hidden="true"></i><span>Areas</span></button>
+        <button class="home-nav-item" type="button" data-home-nav="profile"><i data-lucide="circle-user-round" aria-hidden="true"></i><span>Profile</span></button>
+      </nav>
+      <div class="home-toast" id="home-toast" role="status" aria-live="polite" hidden></div>
+      <div class="profile-panel-backdrop" id="profile-panel-backdrop" hidden></div>
+      <section class="profile-panel" id="profile-panel" role="dialog" aria-modal="true" aria-labelledby="profile-panel-title" hidden>
+        <button class="profile-panel-close" id="profile-panel-close" type="button" aria-label="Close profile"><i data-lucide="x" aria-hidden="true"></i></button>
+        <div class="profile-panel-hero">
+          <div class="profile-panel-avatar">S</div>
+          <div><p class="eyebrow">Your workspace</p><h2 id="profile-panel-title">Sudeep</h2><button class="profile-edit-link" type="button" data-profile-action="edit">Edit profile <i data-lucide="arrow-up-right" aria-hidden="true"></i></button></div>
+        </div>
+        <div class="profile-quick-grid">
+          <button type="button" data-profile-action="orders"><i data-lucide="clipboard-list" aria-hidden="true"></i><strong>Orders</strong><small>No active orders</small></button>
+          <button type="button" data-profile-action="wallet"><i data-lucide="wallet" aria-hidden="true"></i><strong>Wallet</strong><small>₹0 balance</small></button>
+          <button type="button" data-profile-action="finds"><i data-lucide="sparkles" aria-hidden="true"></i><strong>Finds</strong><small>Saved insights</small></button>
+        </div>
+        <div class="profile-link-list">
+          <button type="button" data-profile-action="rewards"><span><i data-lucide="circle-dollar-sign" aria-hidden="true"></i><strong>Data refresh &amp; rewards</strong><small>Latest snapshots are in sync</small></span><i data-lucide="chevron-right" aria-hidden="true"></i></button>
+          <button type="button" data-profile-action="addresses"><span><i data-lucide="map-pin" aria-hidden="true"></i><strong>Saved addresses</strong><small>Manage your analysis locations</small></span><i data-lucide="chevron-right" aria-hidden="true"></i></button>
+          <button type="button" data-profile-action="support"><span><i data-lucide="headphones" aria-hidden="true"></i><strong>Help &amp; support</strong><small>We’re here for you</small></span><i data-lucide="chevron-right" aria-hidden="true"></i></button>
+        </div>
+      </section>
+    </main>
+
+    <main class="map-shell map-screen" id="map-screen" aria-hidden="true">
+      <div class="map-canvas" id="map" aria-label="YaavArea Intelligence map"></div>
       <div class="area-draw-frame" id="area-draw-frame" hidden aria-hidden="true">
         <span>Area marking mode</span>
       </div>
@@ -20,11 +187,14 @@
 
       <section class="map-control-stack" aria-label="Map controls">
         <header class="map-topbar">
-          <h1 aria-label="Sangeetha Intelligence Map">
-            <img class="map-brand-logo" src="/sangeetha-map/assets/sangeetha-logo.png" alt="" aria-hidden="true" />
+          <button class="action-button action-icon-button map-home-button" id="map-home-button" type="button" aria-label="Return to home" title="Home">
+            <i class="control-icon" data-lucide="house" aria-hidden="true"></i>
+          </button>
+          <h1 aria-label="YaavArea Intelligence">
+            <img class="map-brand-logo" src="/sangeetha-map/assets/yaavarea-logo.png" alt="YaavArea Intelligence" />
             <span class="map-brand-name">
-              <span class="map-brand-company">Sangeetha</span>
-              <span class="map-brand-product">Intelligence Map</span>
+              <span class="map-brand-company">YaavArea</span>
+              <span class="map-brand-product">Intelligence</span>
             </span>
           </h1>
           <button class="action-button action-icon-button top-search-button" id="top-search-button" type="button" aria-label="Show search" aria-expanded="false" title="Search stores">

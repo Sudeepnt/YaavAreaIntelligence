@@ -65,7 +65,7 @@ function getLocalMapsKey() {
   if (process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
     return process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   }
-  const indexHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const indexHtml = fs.readFileSync(path.join(ROOT, "sangeetha-map", "index.html"), "utf8");
   return indexHtml.match(/ATIT_GOOGLE_MAPS_API_KEY\s*=\s*["']([^"']+)/)?.[1] ?? "";
 }
 

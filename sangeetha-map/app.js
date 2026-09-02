@@ -25,6 +25,9 @@ const state = {
   cityBoundaryRectangle: null,
   clusterer: null,
   config: null,
+  homePanel: "overview",
+  homePanelTransitionToken: 0,
+  homeTabInteractionScrollTop: null,
   filteredStores: [],
   initialViewApplied: false,
   locationAccuracyCircle: null,
@@ -159,6 +162,31 @@ const el = {
   storeSearchResults: document.getElementById("store-search-results"),
   storeSheet: document.getElementById("store-sheet"),
   storeSheetBackdrop: document.getElementById("store-sheet-backdrop"),
+  homeScreen: document.getElementById("home-screen"),
+  mapScreen: document.getElementById("map-screen"),
+  homeSearchInput: document.getElementById("home-search-input"),
+  homeSearchResults: document.getElementById("home-search-results"),
+  homeToast: document.getElementById("home-toast"),
+  homeHeroStoreCount: document.getElementById("home-hero-store-count"),
+  homeCoverageLeadingCount: document.getElementById("home-coverage-leading-count"),
+  homeCoverageLeadingState: document.getElementById("home-coverage-leading-state"),
+  homeCoverageBars: document.getElementById("home-coverage-bars"),
+  homeTotalStores: document.getElementById("home-total-stores"),
+  homeTotalCities: document.getElementById("home-total-cities"),
+  homeTotalStates: document.getElementById("home-total-states"),
+  homeLensStoreCount: document.getElementById("home-lens-store-count"),
+  homeTrafficCorridorCount: document.getElementById("home-traffic-corridor-count"),
+  homeTrafficPrimary: document.getElementById("home-traffic-primary"),
+  homeRegionalGrid: document.getElementById("home-regional-grid"),
+  homeLoader: document.getElementById("home-loader"),
+  homeSignalGrid: document.getElementById("home-signal-grid"),
+  homeSavedAreaButton: document.getElementById("home-saved-area-button"),
+  homeAppShell: document.querySelector(".home-app-shell"),
+  cloudErrorScreen: document.getElementById("cloud-error-screen"),
+  mapHomeButton: document.getElementById("map-home-button"),
+  profilePanel: document.getElementById("profile-panel"),
+  profilePanelBackdrop: document.getElementById("profile-panel-backdrop"),
+  profilePanelClose: document.getElementById("profile-panel-close"),
 };
 
 let mapsLoaderPromise = null;
@@ -217,6 +245,354 @@ function showStatusCard(visible) {
 function setLoadingState(loading) {
   state.loading = loading;
   el.regionFilter.disabled = loading || state.areaMode;
+}
+
+const HOME_REGION_ORDER = [
+  ["Karnataka", "KA"],
+  ["Telangana", "TS"],
+  ["Tamil Nadu", "TN"],
+  ["Andhra Pradesh", "AP"],
+];
+
+let homeToastTimer = null;
+
+function showHomeToast(message, duration = 3600) {
+  if (!el.homeToast) return;
+  window.clearTimeout(homeToastTimer);
+  el.homeToast.textContent = message;
+  el.homeToast.hidden = false;
+  if (duration > 0) {
+    homeToastTimer = window.setTimeout(() => {
+      el.homeToast.hidden = true;
+    }, duration);
+  }
+}
+
+function getHomeStateCounts(stores) {
+  return stores.reduce((counts, store) => {
+    const region = String(store.state || "Unknown").trim();
+    counts.set(region, (counts.get(region) || 0) + 1);
+    return counts;
+  }, new Map());
+}
+
+function getHomeCityName(store) {
+  return String(store.city || store.state || "Unknown").trim();
+}
+
+function renderHomeDashboard(stores = []) {
+  const stateCounts = getHomeStateCounts(stores);
+  const sortedRegions = [...stateCounts.entries()].sort((left, right) => right[1] - left[1]);
+  const leadingRegion = sortedRegions[0];
+  const totalStores = stores.length;
+  const totalCities = new Set(stores.map(getHomeCityName).filter(Boolean)).size;
+  const totalStates = stateCounts.size;
+
+  if (totalStores) {
+    el.homeHeroStoreCount.textContent = totalStores.toLocaleString("en-IN");
+    el.homeTotalStores.textContent = totalStores.toLocaleString("en-IN");
+    el.homeLensStoreCount.textContent = totalStores.toLocaleString("en-IN");
+    el.homeTotalCities.textContent = totalCities.toLocaleString("en-IN");
+    el.homeTotalStates.textContent = totalStates.toLocaleString("en-IN");
+  }
+
+  if (leadingRegion) {
+    el.homeCoverageLeadingCount.textContent = leadingRegion[1].toLocaleString("en-IN");
+    el.homeCoverageLeadingState.textContent = `${leadingRegion[0]} leads`;
+  }
+
+  const barRegions = (sortedRegions.length ? sortedRegions : HOME_REGION_ORDER.map(([region]) => [region, 0])).slice(0, 4);
+  const maxCount = Math.max(...barRegions.map(([, count]) => count), 1);
+  el.homeCoverageBars.innerHTML = barRegions.map(([region, count]) => `
+    <div class="coverage-bar-row">
+      <span>${escapeHtml(region)}</span>
+      <span class="coverage-bar-track"><i style="width:${Math.max(count ? 4 : 0, Math.round((count / maxCount) * 100))}%"></i></span>
+      <strong>${count.toLocaleString("en-IN")}</strong>
+    </div>
+  `).join("");
+
+  const regionalCards = HOME_REGION_ORDER.map(([region, code]) => [region, code, stateCounts.get(region) || 0]);
+  const regionalMax = Math.max(...regionalCards.map(([, , count]) => count), 1);
+  el.homeRegionalGrid.innerHTML = regionalCards.map(([region, code, count]) => `
+    <article class="regional-card">
+      <div class="regional-card-top"><h3>${escapeHtml(region)}</h3><span class="regional-card-code">${code}</span></div>
+      <div class="regional-card-count"><strong>${count.toLocaleString("en-IN")}</strong><span>stores</span></div>
+      <div class="regional-card-track"><i style="width:${Math.max(count ? 5 : 0, Math.round((count / regionalMax) * 100))}%"></i></div>
+    </article>
+  `).join("");
+  renderIconSet(el.homeRegionalGrid);
+}
+
+function updateHomeTrafficStats(snapshot = state.trafficSnapshot) {
+  const corridorCount = Number(snapshot?.corridors?.length) || 7;
+  el.homeTrafficCorridorCount.textContent = corridorCount;
+  el.homeTrafficPrimary.textContent = corridorCount;
+}
+
+function setHomeNavState(activeName) {
+  document.querySelectorAll("[data-home-nav]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.homeNav === activeName);
+  });
+}
+
+function setHomePanel(panel) {
+  const currentScrollTop = state.homeTabInteractionScrollTop ?? el.homeScreen.scrollTop;
+  state.homeTabInteractionScrollTop = null;
+  state.homePanel = panel;
+  document.querySelectorAll("[data-home-panels]").forEach((section) => {
+    const panels = section.dataset.homePanels.split(/\s+/);
+    section.hidden = !panels.includes(panel);
+  });
+  const showSignalGrid = panel === "overview" || panel === "demand" || panel === "traffic";
+  el.homeSignalGrid.hidden = !showSignalGrid;
+  document.querySelectorAll(".home-signal-grid > [data-home-panels]").forEach((card) => {
+    const panels = card.dataset.homePanels.split(/\s+/);
+    card.hidden = !panels.includes(panel);
+  });
+  document.querySelectorAll("[data-home-section]").forEach((button) => {
+    if (button.classList.contains("home-data-tab")) {
+      button.classList.toggle("is-active", button.dataset.homeSection === panel);
+    }
+  });
+  el.homeScreen.scrollTop = currentScrollTop;
+  requestAnimationFrame(() => {
+    el.homeScreen.scrollTop = currentScrollTop;
+  });
+}
+
+function transitionHomePanel(panel) {
+  const currentScrollTop = state.homeTabInteractionScrollTop ?? el.homeScreen.scrollTop;
+  state.homeTabInteractionScrollTop = null;
+  state.homePanel = panel;
+  const transitionToken = ++state.homePanelTransitionToken;
+
+  el.homeLoader.hidden = false;
+  document.querySelectorAll("[data-home-panels]").forEach((section) => {
+    section.hidden = true;
+  });
+  el.homeSignalGrid.hidden = true;
+  document.querySelectorAll(".home-data-tab").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.homeSection === panel);
+  });
+  el.homeScreen.scrollTop = currentScrollTop;
+
+  window.setTimeout(() => {
+    if (transitionToken !== state.homePanelTransitionToken) return;
+    el.homeLoader.hidden = true;
+    setHomePanel(panel);
+  }, 650);
+}
+
+function scrollHomeToSection(section) {
+  transitionHomePanel(section);
+}
+
+function setHomeLoading(loading) {
+  el.homeLoader.hidden = !loading;
+  if (loading) {
+    document.querySelectorAll("[data-home-panels]").forEach((section) => {
+      section.hidden = true;
+    });
+    el.homeSignalGrid.hidden = true;
+    return;
+  }
+  setHomePanel(state.homePanel);
+}
+
+async function showMapScreen({ layer = "network", startArea = false } = {}) {
+  try {
+    const map = await ensureMap();
+    el.mapScreen.hidden = false;
+    el.homeScreen.hidden = true;
+    el.homeScreen.setAttribute("aria-hidden", "true");
+    el.mapScreen.setAttribute("aria-hidden", "false");
+    setHomeNavState("map");
+    requestAnimationFrame(() => google.maps.event.trigger(map, "resize"));
+    if (layer === "traffic") {
+      state.trafficVisible = true;
+      updateTrafficToggle();
+      await renderBengaluruTraffic({ fitView: true });
+    } else if (layer === "demand") {
+      state.commercialDensityVisible = true;
+      updateCommercialDensityToggle();
+      await renderCommercialDensity();
+    }
+    if (startArea && !state.areaMode) startAreaSelection();
+    return true;
+  } catch (error) {
+    showHomeToast(`Map setup needed: ${error.message}`, 7000);
+    return false;
+  }
+}
+
+function showHomeScreen() {
+  if (!el.mapScreen) return;
+  state.homePanelTransitionToken += 1;
+  closeProfilePanel();
+  showStoreSheet(null);
+  el.homeLoader.hidden = true;
+  el.homeAppShell.hidden = false;
+  el.cloudErrorScreen.hidden = true;
+  el.mapScreen.hidden = true;
+  el.mapScreen.setAttribute("aria-hidden", "true");
+  el.homeScreen.hidden = false;
+  el.homeScreen.setAttribute("aria-hidden", "false");
+  setHomeNavState("home");
+}
+
+function showCloudErrorScreen(activeNav) {
+  state.homePanelTransitionToken += 1;
+  closeProfilePanel();
+  showStoreSheet(null);
+  el.homeLoader.hidden = true;
+  el.mapScreen.setAttribute("aria-hidden", "true");
+  el.mapScreen.hidden = true;
+  el.homeScreen.hidden = false;
+  el.homeScreen.scrollTop = 0;
+  el.homeAppShell.hidden = true;
+  el.cloudErrorScreen.hidden = false;
+  setHomeNavState(activeNav);
+}
+
+function showProfilePanel() {
+  showHomeScreen();
+  el.profilePanel.hidden = false;
+  el.profilePanelBackdrop.hidden = false;
+  setHomeNavState("profile");
+  el.profilePanelClose.focus();
+}
+
+function closeProfilePanel() {
+  if (!el.profilePanel) return;
+  el.profilePanel.hidden = true;
+  el.profilePanelBackdrop.hidden = true;
+  if (!el.homeScreen.hidden) setHomeNavState("home");
+}
+
+function handleProfileAction(action) {
+  const messages = {
+    edit: "Profile editing will be available in the next workspace update.",
+    orders: "No active orders in this workspace.",
+    wallet: "Your wallet balance is ₹0.",
+    finds: "Saved insights will appear here as you build them.",
+    rewards: "Your latest network data is already in sync.",
+    addresses: "Saved analysis addresses will be available here soon.",
+    support: "Support is ready for your next area intelligence question.",
+  };
+  showHomeToast(messages[action] || "This profile action is ready for the next workspace update.");
+}
+
+function clearHomeSearchResults() {
+  el.homeSearchResults.hidden = true;
+  el.homeSearchResults.replaceChildren();
+}
+
+function renderHomeSearchResults(query) {
+  const trimmedQuery = String(query || "").trim();
+  if (!trimmedQuery) {
+    clearHomeSearchResults();
+    return;
+  }
+  const matches = getSearchMatches(trimmedQuery).slice(0, 6);
+  el.homeSearchResults.replaceChildren();
+  if (!matches.length) {
+    clearHomeSearchResults();
+    return;
+  }
+  matches.forEach((store) => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "home-search-option";
+    option.innerHTML = `
+      <strong>#${escapeHtml(formatStoreNumber(store))} ${escapeHtml(getStoreLocationName(store.name))}</strong>
+      <small>${escapeHtml([store.city, store.state].filter(Boolean).join(", ") || "Store")}</small>
+    `;
+    option.addEventListener("click", async () => {
+      clearHomeSearchResults();
+      el.homeSearchInput.value = `#${formatStoreNumber(store)} ${getStoreLocationName(store.name)}`;
+      if (await showMapScreen()) await focusStoreFromSearch(store);
+    });
+    el.homeSearchResults.appendChild(option);
+  });
+  el.homeSearchResults.hidden = false;
+}
+
+function bindHomeEvents() {
+  document.querySelectorAll(".home-data-tab").forEach((button) => {
+    button.addEventListener("pointerdown", () => {
+      state.homeTabInteractionScrollTop = el.homeScreen.scrollTop;
+    });
+    button.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        state.homeTabInteractionScrollTop = el.homeScreen.scrollTop;
+      }
+    });
+  });
+  document.querySelectorAll("[data-home-section]").forEach((button) => {
+    button.addEventListener("click", () => scrollHomeToSection(button.dataset.homeSection));
+  });
+  document.querySelectorAll("[data-open-map]").forEach((button) => {
+    button.addEventListener("click", () => showMapScreen({ layer: button.dataset.openMap }));
+  });
+  document.querySelectorAll("[data-home-nav]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = button.dataset.homeNav;
+      if (target === "map") {
+        showCloudErrorScreen("map");
+      } else if (target === "areas") {
+        showCloudErrorScreen("areas");
+      } else if (target === "insights") {
+        setHomeNavState("insights");
+        scrollHomeToSection("demand");
+      } else if (target === "profile") {
+        showProfilePanel();
+      } else {
+        showHomeScreen();
+        scrollHomeToSection("overview");
+      }
+    });
+  });
+  el.homeSearchInput.addEventListener("input", () => renderHomeSearchResults(el.homeSearchInput.value));
+  el.homeSearchInput.addEventListener("focus", () => renderHomeSearchResults(el.homeSearchInput.value));
+  el.homeSearchInput.addEventListener("keydown", async (event) => {
+    if (event.key !== "Enter") return;
+    const match = getSearchMatches(el.homeSearchInput.value)[0];
+    if (!match) return;
+    event.preventDefault();
+    clearHomeSearchResults();
+    if (await showMapScreen()) await focusStoreFromSearch(match);
+  });
+  document.addEventListener("click", (event) => {
+    if (!el.homeSearchResults.contains(event.target) && !el.homeSearchInput.contains(event.target)) {
+      clearHomeSearchResults();
+    }
+  });
+  el.homeSearchInput.addEventListener("keydown", (event) => {
+    if (event.key === "/" && document.activeElement !== el.homeSearchInput) {
+      event.preventDefault();
+      el.homeSearchInput.focus();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "/" && document.activeElement !== el.homeSearchInput && !el.homeScreen.hidden) {
+      event.preventDefault();
+      el.homeSearchInput.focus();
+    }
+  });
+  document.getElementById("home-location-button")?.addEventListener("click", () => showHomeToast("Showing your full India network."));
+  document.getElementById("home-notification-button")?.addEventListener("click", () => showHomeToast("All data sources are in sync."));
+  document.getElementById("home-profile-button")?.addEventListener("click", showProfilePanel);
+  el.profilePanelClose?.addEventListener("click", closeProfilePanel);
+  el.profilePanelBackdrop?.addEventListener("click", closeProfilePanel);
+  document.querySelectorAll("[data-profile-action]").forEach((button) => {
+    button.addEventListener("click", () => handleProfileAction(button.dataset.profileAction));
+  });
+  document.getElementById("hero-open-map-button")?.addEventListener("click", () => showMapScreen());
+  document.getElementById("home-network-map-button")?.addEventListener("click", () => showMapScreen());
+  document.getElementById("home-regional-map-button")?.addEventListener("click", () => showMapScreen());
+  document.getElementById("home-area-button")?.addEventListener("click", () => showMapScreen({ startArea: true }));
+  el.homeSavedAreaButton?.addEventListener("click", () => showMapScreen({ startArea: true }));
+  el.mapHomeButton?.addEventListener("click", showHomeScreen);
 }
 
 function setSearchVisibility(visible) {
@@ -425,6 +801,7 @@ async function renderBengaluruTraffic({ fitView = false } = {}) {
     }
     const corridors = state.trafficSnapshot.corridors || [];
     if (!corridors.length) throw new Error("Bengaluru traffic snapshot is unavailable.");
+    updateHomeTrafficStats(state.trafficSnapshot);
 
     const map = await ensureMap();
     clearTrafficRoute();
@@ -2253,6 +2630,7 @@ async function loadStores({ preserveViewport = false } = {}) {
   const stores = Array.isArray(payload.stores) ? payload.stores : [];
   state.stores = stores.filter(isCurrentLocatorStore);
   state.activeStores = state.stores.slice();
+  renderHomeDashboard(state.stores);
   if (!state.initialViewApplied) {
     state.selectedRegion = "";
     state.initialViewApplied = true;
@@ -2436,6 +2814,10 @@ function bindEvents() {
         closeDeleteConfirmation();
         return;
       }
+      if (!el.profilePanel.hidden) {
+        closeProfilePanel();
+        return;
+      }
       if (state.areaMode) {
         clearAreaSelection();
         renderSavedAreas();
@@ -2504,10 +2886,30 @@ async function init() {
   renderIconSet();
   window.addEventListener("load", () => renderIconSet(), { once: true });
   bindEvents();
+  bindHomeEvents();
+  renderHomeDashboard();
   updateSavedAreasToggle();
   updateTrafficToggle();
   updateCommercialDensityToggle();
   setLoadingState(true);
+  setHomePanel("overview");
+  setHomeLoading(true);
+  const homeLoadStartedAt = performance.now();
+
+  try {
+    const payload = await fetchJson("/api/sangeetha-stores");
+    const stores = Array.isArray(payload.stores) ? payload.stores : [];
+    state.stores = stores.filter(isCurrentLocatorStore);
+    renderHomeDashboard(state.stores);
+  } catch (error) {
+    showHomeToast("Network data is taking a moment to load.", 5200);
+    console.warn("Home dashboard data unavailable.", error);
+  }
+
+  const minimumLoaderTime = 650;
+  const loaderWaitTime = Math.max(0, minimumLoaderTime - (performance.now() - homeLoadStartedAt));
+  if (loaderWaitTime) await new Promise((resolve) => window.setTimeout(resolve, loaderWaitTime));
+  setHomeLoading(false);
 
   try {
     await loadRuntimeConfig();
