@@ -23,8 +23,8 @@
               <span class="notification-dot" aria-hidden="true"></span>
             </button>
             <button class="home-profile-button" id="home-profile-button" type="button">
-              <span class="profile-avatar">S</span>
-              <span class="profile-copy"><strong>Sudeep</strong><small>Admin view</small></span>
+              <span class="profile-avatar">U</span>
+              <span class="profile-copy"><strong>Utsav Shetty</strong><small>Admin view</small></span>
               <i data-lucide="chevron-down" aria-hidden="true"></i>
             </button>
           </div>
@@ -37,11 +37,14 @@
             <p class="home-intro-copy">One clear view of your network, customer demand, and the streets shaping your next move.</p>
           </div>
           <div class="home-controls-row">
-            <button class="location-pill" id="home-location-button" type="button">
-              <i data-lucide="map-pin" aria-hidden="true"></i>
-              <span><strong>All India</strong><small>Network view</small></span>
-              <i class="location-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
-            </button>
+            <div class="home-location-picker">
+              <button class="location-pill" id="home-location-button" type="button" aria-haspopup="listbox" aria-expanded="false">
+                <i data-lucide="map-pin" aria-hidden="true"></i>
+                <span><strong id="home-location-label">All India</strong><small>Network view</small></span>
+                <i class="location-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+              </button>
+              <div class="home-location-menu" id="home-location-menu" role="listbox" aria-label="Choose a state" hidden></div>
+            </div>
             <section class="home-search-section" aria-label="Search intelligence">
               <div class="home-search-wrap">
                 <i data-lucide="search" aria-hidden="true"></i>
@@ -62,7 +65,7 @@
         </nav>
 
         <div class="home-loader" id="home-loader" role="status" aria-live="polite" hidden>
-          <div class="home-loader-ring"><span class="home-loader-flower" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+          <div class="home-loader-ring"><i class="home-loader-location" data-lucide="map-pin" aria-hidden="true"></i></div>
           <span>Loading your intelligence view</span>
         </div>
 
@@ -158,8 +161,8 @@
       <section class="profile-panel" id="profile-panel" role="dialog" aria-modal="true" aria-labelledby="profile-panel-title" hidden>
         <button class="profile-panel-close" id="profile-panel-close" type="button" aria-label="Close profile"><i data-lucide="x" aria-hidden="true"></i></button>
         <div class="profile-panel-hero">
-          <div class="profile-panel-avatar">S</div>
-          <div><p class="eyebrow">Your workspace</p><h2 id="profile-panel-title">Sudeep</h2><button class="profile-edit-link" type="button" data-profile-action="edit">Edit profile <i data-lucide="arrow-up-right" aria-hidden="true"></i></button></div>
+          <div class="profile-panel-avatar">U</div>
+          <div><p class="eyebrow">Your workspace</p><h2 id="profile-panel-title">Utsav Shetty</h2><button class="profile-edit-link" type="button" data-profile-action="edit">Edit profile <i data-lucide="arrow-up-right" aria-hidden="true"></i></button></div>
         </div>
         <div class="profile-quick-grid">
           <button type="button" data-profile-action="orders"><i data-lucide="clipboard-list" aria-hidden="true"></i><strong>Orders</strong><small>No active orders</small></button>

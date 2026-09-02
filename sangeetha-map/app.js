@@ -85,6 +85,45 @@ const STATE_CODES = {
   Telangana: "TS",
 };
 
+const INDIA_REGION_NAMES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
+];
+
 const el = {
   addStoreButton: document.getElementById("add-store-button"),
   addStoreForm: document.getElementById("add-store-form"),
@@ -166,6 +205,10 @@ const el = {
   mapScreen: document.getElementById("map-screen"),
   homeSearchInput: document.getElementById("home-search-input"),
   homeSearchResults: document.getElementById("home-search-results"),
+  homeLocationPicker: document.querySelector(".home-location-picker"),
+  homeLocationButton: document.getElementById("home-location-button"),
+  homeLocationLabel: document.getElementById("home-location-label"),
+  homeLocationMenu: document.getElementById("home-location-menu"),
   homeToast: document.getElementById("home-toast"),
   homeHeroStoreCount: document.getElementById("home-hero-store-count"),
   homeCoverageLeadingCount: document.getElementById("home-coverage-leading-count"),
@@ -280,6 +323,63 @@ function getHomeCityName(store) {
   return String(store.city || store.state || "Unknown").trim();
 }
 
+function getHomeRegionNames() {
+  return [...new Set([
+    ...INDIA_REGION_NAMES,
+    ...state.stores.map((store) => String(store.state || "").trim()).filter(Boolean),
+  ])].sort((left, right) => left.localeCompare(right));
+}
+
+function renderHomeLocationMenu() {
+  if (!el.homeLocationMenu) return;
+  const counts = getHomeStateCounts(state.stores);
+  const options = [
+    ["", "All India", state.stores.length, "Network view"],
+    ...getHomeRegionNames().map((region) => [region, region, counts.get(region) || 0, counts.has(region) ? "Stores in network" : "No stores in current data"]),
+  ];
+
+  el.homeLocationMenu.innerHTML = options.map(([value, label, count, detail]) => `
+    <button class="home-location-option${state.selectedRegion === value ? " is-selected" : ""}" type="button" role="option" aria-selected="${state.selectedRegion === value}" data-home-region="${escapeHtml(value)}">
+      <span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(value ? `${count.toLocaleString("en-IN")} · ${detail}` : detail)}</small></span>
+      <i data-lucide="${state.selectedRegion === value ? "check" : "map-pin"}" aria-hidden="true"></i>
+    </button>
+  `).join("");
+  renderIconSet(el.homeLocationMenu);
+}
+
+function closeHomeLocationMenu() {
+  if (!el.homeLocationMenu || !el.homeLocationButton) return;
+  el.homeLocationMenu.hidden = true;
+  el.homeLocationButton.setAttribute("aria-expanded", "false");
+}
+
+function toggleHomeLocationMenu() {
+  if (!el.homeLocationMenu || !el.homeLocationButton) return;
+  const opening = el.homeLocationMenu.hidden;
+  el.homeLocationMenu.hidden = !opening;
+  el.homeLocationButton.setAttribute("aria-expanded", String(opening));
+}
+
+async function selectHomeRegion(region) {
+  state.selectedRegion = region;
+  el.homeLocationLabel.textContent = region || "All India";
+  el.regionFilter.value = region;
+  closeHomeLocationMenu();
+  renderHomeLocationMenu();
+
+  const visibleStores = region
+    ? state.stores.filter((store) => store.state === region)
+    : state.stores;
+  renderHomeDashboard(visibleStores);
+
+  if (!state.map || !state.initialViewApplied) return;
+  try {
+    await applyRegionFilter({ preserveViewport: true });
+  } catch (error) {
+    showHomeToast(`State filter unavailable: ${error.message}`, 5200);
+  }
+}
+
 function renderHomeDashboard(stores = []) {
   const stateCounts = getHomeStateCounts(stores);
   const sortedRegions = [...stateCounts.entries()].sort((left, right) => right[1] - left[1]);
@@ -321,6 +421,7 @@ function renderHomeDashboard(stores = []) {
     </article>
   `).join("");
   renderIconSet(el.homeRegionalGrid);
+  renderHomeLocationMenu();
 }
 
 function updateHomeTrafficStats(snapshot = state.trafficSnapshot) {
@@ -566,6 +667,9 @@ function bindHomeEvents() {
     if (!el.homeSearchResults.contains(event.target) && !el.homeSearchInput.contains(event.target)) {
       clearHomeSearchResults();
     }
+    if (!el.homeLocationPicker?.contains(event.target)) {
+      closeHomeLocationMenu();
+    }
   });
   el.homeSearchInput.addEventListener("keydown", (event) => {
     if (event.key === "/" && document.activeElement !== el.homeSearchInput) {
@@ -579,7 +683,11 @@ function bindHomeEvents() {
       el.homeSearchInput.focus();
     }
   });
-  document.getElementById("home-location-button")?.addEventListener("click", () => showHomeToast("Showing your full India network."));
+  el.homeLocationButton?.addEventListener("click", toggleHomeLocationMenu);
+  el.homeLocationMenu?.addEventListener("click", (event) => {
+    const option = event.target.closest("[data-home-region]");
+    if (option) selectHomeRegion(option.dataset.homeRegion || "");
+  });
   document.getElementById("home-notification-button")?.addEventListener("click", () => showHomeToast("All data sources are in sync."));
   document.getElementById("home-profile-button")?.addEventListener("click", showProfilePanel);
   el.profilePanelClose?.addEventListener("click", closeProfilePanel);
